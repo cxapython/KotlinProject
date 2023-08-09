@@ -381,3 +381,26 @@ fun main(){
 ```
 
 因为data class帮我们实现了equals,hashCode(),toString()等固定且无实际逻辑意义的方法，从而帮我们大大降低了工作量。
+
+### 9.单例创建
+
+kotlin创建单例类很简单，将class关键改为object即可，即下面这样
+
+```kotlin
+package com.example.ktproject
+
+object Singleton {
+    fun singleton(){
+            println("singleton is called")        
+    }
+}
+```
+
+调用代码,类似java中的静态方法
+
+```kotlin
+Singleton.singleton()
+```
+
+
+
