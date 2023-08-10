@@ -895,5 +895,7 @@ companion object这个关键字实际上会在Util类的内部创建一个伴生
 
 比如我们创建的那个文件kotlin文件叫Helper.kt，Kotlin编译器会自动创建一个叫作HelperKt的Java类， 在Java中使用HelperKt.doSomething()的写法来调用就可以了。
 
+#### 变量延迟初始化
 
+延迟初始化使用的是lateinit关键字，它可以告诉Kotlin编译器，我会在晚些时候对这个变量 进行初始化，这样就不用在一开始的时候将它赋值为null了。
 
