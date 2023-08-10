@@ -2,6 +2,8 @@
 
 kotlin每一行代码后面无需加;
 
+# 基础部分
+
 ### 1.搭个架子
 
 开发一个kotlin版本的demo app，界面选择选择Empty,然后在MainActivity.kt同级目录下创建LearnKotlin.kt内容如下
@@ -156,7 +158,7 @@ fun getScore(name:String) = when{
 
 使用这种方法的好处，可以在匹配的时候对name做操作，比如
 
-```
+```kotlin
 fun getScore(name:String) = when{
 		//并一定是用等于号才行
     name.startsWith("Zhao") ->86
@@ -285,12 +287,6 @@ kotlin中的继承关键字是:，
 Person类后面的括号的作用:涉及到主构造函数和次构造函数，每个类默认都有一个不带参数的主构造函数
 
 主构造函数没有方法体，如果想写一些逻辑可以使用init结构体。就像上面的Student。
-
-
-
-
-
-
 
 下面对父类和子类做一些变换，给父类显示的指明参数，
 
