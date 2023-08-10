@@ -899,3 +899,155 @@ companion object这个关键字实际上会在Util类的内部创建一个伴生
 
 延迟初始化使用的是lateinit关键字，它可以告诉Kotlin编译器，我会在晚些时候对这个变量 进行初始化，这样就不用在一开始的时候将它赋值为null了。
 
+### 泛型和委托
+
+#### 泛型
+
+定一个泛型的类
+
+```kotlin
+class MyClass<T> {
+    fun method(params:T):T{
+        return params
+    }
+}
+```
+
+下面开始调用这个类以及方法 其中的T需要我们指定类型。这里指定其为Int类型。
+
+
+
+```kotlin
+val myclass = MyClass<Int>();
+val result = myclass.method(123)
+```
+
+如果我们只想定义一个泛型的方法而不是泛型的类。
+
+````kotlin
+class MyClass {
+    fun <T> method(param: T): T {
+        return param
+} 
+}
+````
+
+调用方法有所变化
+
+```kotlin
+val myClass = MyClass()
+val result = myClass.method<Int>(123)
+```
+
+因为Kotlin有类型推导机制我们可以进一步简化
+
+```kotlin
+val myClass = MyClass()
+val result = myClass.method(123)
+```
+
+另外可以限定method传入的类型
+
+```kotlin
+   fun <T> method(param: T)
+```
+
+如果限定为数字类型可以改为下面这样，
+
+```kotlin
+   fun <T：Number> method(param: T)
+```
+
+Number表示Int，Double以及Float等数字类型
+
+默认的限制类型其实是Any?
+
+#### 委托
+
+委托是一种设计模式，它的基本理念是:操作对象自己不会去处理某段逻辑，而是会把工作委 托给另外一个辅助对象去处理。
+
+Kotlin委托功能分为了两种:类委托和委托属性。
+
+##### 类委托
+
+委托的关键字为by，类委托的核心思想是将一个类的具体实现委托给另一个类去完成。
+
+一段代码示例
+
+```kotlin
+class MySet<T>(val helperSet: HashSet<T>) : Set<T> {
+    override val size: Int get() = helperSet.size
+    override fun contains(element: T) = helperSet.contains(element)
+    override fun containsAll(elements: Collection<T>) = helperSet.containsAll(elements) override fun isEmpty() = helperSet.isEmpty()
+    override fun iterator() = helperSet.iterator()
+}
+```
+
+这里我们自己定义了一个方法实现了Set。通过类委托上面的代码可以改为
+
+
+
+```kotlin
+class MySet<T>(val helperSet: HashSet<T>) : Set<T> by helperSet { 
+		fun helloWorld() = println("Hello World")
+		override fun isEmpty() = false
+}
+```
+
+不仅实现了原来Set的功能，还重写了自己需要方法。
+
+#### 委托属性
+
+委托属性的语法结构
+
+```kotlin
+class MyClass {
+    var p by Delegate()
+}
+```
+
+上面代码表示将p属性的具体实现委托给了Delegate类去完成,当调用p属性的时候会自动调用Delegate类的getValue()方法，当给p属性赋值的时候会自动调用Delegate类的 setValue()方法。所以我们需要实现一个Delegate类才行。
+
+```kotlin
+class Delegate {
+		var propValue: Any? = null
+		operator fun getValue(myClass: MyClass, prop: KProperty<*>): Any? {
+      return propValue
+		}
+		operator fun setValue(myClass: MyClass, prop: KProperty<*>, value: Any?) {
+      propValue = value
+		} 
+	}
+```
+
+在Delegate类中我们必须实现getValue()和setValue()这两个方法，并且都要使用operator关键字进行声明。
+
+getValue()方法要接收两个参数:第一个参数用于声明该Delegate类的委托功能可以在什么类中使用，这里写成MyClass表示仅可在MyClass类中使用;第二个参数KProperty<*>是 Kotlin中的一个属性操作类，可用于获取各种属性相关的值，在当前场景下用不着，但是必须在方法参数上进行声明。另外，<*>这种泛型的写法表示你不知道或者不关心泛型的具体类型，只是为了通过语法编译而已，有点类似于Java中<?>的写法。至于返回值可以声明成任何类型，根据具体的实现逻辑去写就行了，上述代码只是一种示例写法。
+
+setValue()要接收3个参数。前两个参数和getValue()方法是相同的，最后一个参数表示具体要赋值给委托属性的值，这个参数的类型必须和getValue()方法返回值的类型保持一致。
+
+整个委托属性的工作流程就是这样实现的，现在当我们给MyClass的p属性赋值时，就会调用 Delegate类的setValue()方法，当获取MyClass中p属性的值时，就会调用Delegate类的 getValue()方法。
+
+### 泛型高级用法
+
+#### 泛型实化
+
+*类型擦除机制*
+
+Java的泛型功能是通过类型擦除机制来实现的。什么意思呢?就是说泛型对于类 型的约束只在编译时期存在，运行的时候仍然会按照JDK 1.5之前的机制来运行，JVM是识别不 出来我们在代码中指定的泛型类型的。例如，假设我们创建了一个List<String>集合，虽然 在编译时期只能向集合中添加字符串类型的元素，但是在运行时期JVM并不能知道它本来只打算 包含哪种类型的元素，只能识别出来它是个List。
+
+Kotlin提供了一个内联函数的概念，内联函数中的代码会在编译的时候自动被替换到调用它的地方，这样的话也就不存 在什么泛型擦除的问题了，因为代码在编译之后会直接使用实际的类型来替代内联函数中的泛型声明。
+
+泛型实化的一个代码示例
+
+```kotlin
+inline fun <reified T> getGenericType() {
+}
+```
+
+函数必须是内联函数才行，也就是要用inline 关键字来修饰该函数。其次，在声明泛型的地方必须加上reified关键字来表示该泛型要进行 实化。
+
+
+
+
+
