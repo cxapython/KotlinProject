@@ -398,5 +398,502 @@ object Singleton {
 Singleton.singleton()
 ```
 
+# Lambda编程
+
+### 1.集合的创建与遍历
+
+#### List和Set
+
+========
+
+##### List
+
+1).创建
+
+在Java中我们这样创建一个list
+
+```java
+val list = ArrayList<String>()
+list.add("Apple")
+list.add("Banana") 
+```
+
+kotlin中可以使用内置的listOf函数，来简化初始化操作。
+
+```kotlin
+val list = listOf("Apple", "Banana")
+```
+
+这里仅用一行代码就完成了集合的初始化操作。注意listOf()函数创建的是一个不可变的集合，只能用于读取。
+
+可以使用mutableListOf替换listOf创建可变集合
+
+```kotlin
+val list = mutableListOf("Apple", "Banana")
+list.add("Orange")
+```
+
+2).遍历
+
+不管是可变集合还是不可变集合，我们都可以使用之前提到的for..in进行遍历。
+
+```kotlin
+fun main() {
+    for(i in listOf("Apple", "Banana")){
+        println("i is $i")
+
+    }
+}
+```
+
+
+
+##### Set
+
+set使用上和list一样，将上面的list或为set既可，listOf改为setOf,mutableListOf改为mutableSetOf.
+
+set的还一个特性就是内部元素不会出现重复，常用作数组去重。
+
+
+
+#### Map
+
+##### 用法1:
+
+
+
+*创建*
+
+首先和Java中的Map写法一样
+
+```kotlin
+val map = HashMap<String, Int>() 
+map.put("Apple", 1)
+map["Banana"] = 2
+```
+
+可以看到赋值有两种形式，推荐=赋值方式。
+
+*读取*
+
+```kotlin
+val number = map["Banana"]
+```
+
+可以使用get或者上面的方法读取。
+
+
+
+区别于java，kotlin和提供了类似上面list和set一样的创建集合的方法。mapOf和mutableMapOf
+
+##### 用法2
+
+*创建*
+
+```kotlin
+val map = mapOf("Apple" to 1, "Banana" to 2)
+```
+
+关于to关键字后续再补充
+
+*遍历*
+
+不管是方法1还是方法2都可以使用下面的形式进行遍历
+
+```kotlin
+for ((fruit, number) in map) {
+	println("fruit is  $fruit number is $number")
+}
+```
+
+可以看到我们在遍历的时候，每一个子项包括键和值，像python的字典使用items方法遍历一样。
+
+#### 2.集合的函数式API
+
+Lambda表达式的完整语法结构
+
+```
+{参数名1: 参数类型, 参数名2: 参数类型 -> 函数体}
+```
+
+一个例子
+
+```kotlin
+val list = listOf("Apple", "Banana")
+val lambda = { fruit: String -> fruit.length }
+val maxLengthFruit = list.maxBy(lambda)
+```
+
+上面的例子是遵循lambda表达式的语法结构来的，但是并不需要使用lambda表达式完整的语法结构。可以进行如下简化
+
+maxBy是找里面最大的元素，参数是一个lambda表达式。(感觉有点像C#中的linq)。
+
+```kotlin
+val maxLengthFruit = list.maxBy({ fruit: String -> fruit.length })
+```
+
+Kotlin规定，当Lambda参数是函数的最后一个参数时，可以将Lambda表达式移到函数括号的外面。
+
+(这里参数`{ fruit: String -> fruit.length } `是maxBy唯一的参数，那肯定也是最后一个了)
+
+此时代码变为
+
+```kotlin
+val maxLengthFruit = list.maxBy() { fruit: String -> fruit.length }
+```
+
+接下来，如果Lambda参数是函数的唯一一个参数的话，还可以将函数的括号省略:
+
+```kotlin
+val maxLengthFruit = list.maxBy { fruit: String -> fruit.length }
+```
+
+emmm 开始变得不太好理解了。
+
+像Python使用lambda一样，Lambda表达式中的参数列表其实在大多数情况下不必声明参数类型
+
+```kotlin
+val maxLengthFruit = list.maxBy { fruit -> fruit.length }
+```
+
+最后，参数列表只有一个的时候也可以进行省略，但是要使用it关键字代替。
+
+```kotlin
+val maxLengthFruit = list.maxBy { it.length }
+```
+
+注意it关键词这个地方不能替换为别的。它表示当前的项。
+
+
+
+```kotlin
+fun main() {
+    val list = listOf(1,2,3,4,5,6,7)
+    val result = list.filter{
+        it%2==0
+    }.map { it.xor(3) }.first()
+    println(result)
+}
+```
+
+可以看到这个是链式调用的，可以一直调用其他方法。
+
+除此之外还有很多的函数式api不用一一记住比如any,all等方法。现用现查就行，大部分函数式api在大多数语言中表述的含义是一样的。
+
+### 3.Java函数式Api
+
+如果我们在Kotlin代码中调用了一个 Java方法，并且该方法接收一个Java单抽象方法接口参数，就可以使用函数式API。
+
+不太好理解这段话的含义，举例子
+
+Java原生API中有一个最为常见的单抽象方法接口——Runnable接口
+
+```java
+public interface Runnable {
+    void run();
+}
+```
+
+我们知道new Thread可以接收一个Runnable参数。我们就使用java创建子线程举例子。
+
+```java
+new Thread(new Runnable() {
+    @Override
+public void run() { 
+  System.out.println("Thread is running");
+}
+} ).start();
+```
+
+翻译成kotlin版本如下
+
+```kotlin
+Thread(object : Runnable {
+    override fun run() {
+println("Thread is running") }
+}).start()
+```
+
+由于Kotlin完全舍弃了new关键字，因此创建匿名类 实例的时候就不能再使用new了,而是改用了object关键字。
+
+我们可以进一步精简
+
+```kotlin
+Thread(Runnable {
+println("Thread is running")
+}).start()
+```
+
+因为Runnable类中 *只有一个* 待实现方法，即使这里没有显式地重写run()方法，Kotlin也能自动明白Runnable后 面的Lambda表达式就是要在run()方法中实现的内容。
+
+如果一个Java方法的参数列表中有且仅有一个Java单抽象方法接口参数，我们还可以将接口名进行省略。
+
+继续简化代码
+
+```kotlin
+Thread({
+println("Thread is running")
+}).start()
+```
+
+接下来我们看Thread接收的参数是一个lambda表达式了。根据之前的分析，这里lambda参数是函数的唯一一个参数自然也是方法的最后一个参数，所以进一步优化为
+
+```kotlin
+Thread {
+		println("Thread is running")
+}.start()
+```
+
+再举一个常用的例子，创建button按钮并点击的时候
+
+一般我们这么写
+
+```java
+button.setOnClickListener(new View.OnClickListener() { 
+    @Override
+    public void onClick(View v) {
+} });
+```
+
+ 观察发现它又是一个单抽象方法接口
+
+```kotlin
+public interface OnClickListener {
+    void onClick(View v);
+}
+```
+
+结合之前的代码分析，最终可以简化为
+
+```kotlin
+button.setOnClickListener {
+}
+```
+
+
+
+简单记忆:
+
+Java单抽象方法接口指的是接口中只有一个待实现方法。直接优化成{}之后写内容。
+
+
+
+### 空指针
+
+Kotlin将空指针异常的检查提前到了编译时期
+
+#### 判空辅助
+
+第一个 ?.
+
+```kotlin
+a?.doSomething()
+```
+
+就是TS语法一样，如果a不为空就调用doSomething。
+
+对于函数的可空参数我们可以像下面这样使用
+
+```kotlin
+fun doStudy(study: Study?) { 
+			study?.readBooks()
+      study?.doHomework()
+}
+```
+
+
+
+第二个 ?:
+
+可以当作三元运算符去理解,举个例子
+
+```kotlin
+val c = if (a ! = null) { a
+} else { b
+}
+```
+
+可以优化为
+
+```kotlin
+val c = a ?: b
+```
+
+
+
+#### let函数
+
+这个函数提供了函数式API，示例代码如下
+
+```kotlin
+obj.let { obj2 ->
+// 编写具体的业务逻辑
+}
+```
+
+通过例子进行理解
+
+```kotlin
+fun doStudy(study: Study?) { 
+if (study != null) {
+			study.readBooks()
+		study.doHomework()
+} 
+}
+```
+
+我们可以使用?.结合let将代码改为
+
+```kotlin
+fun doStudy(study: Study?) {
+  study?.let { stu ->
+  stu.readBooks()
+  stu.doHomework() }
+}
+```
+
+另外我们知道lambda表达式的参数列表中只有一个参数时可以不用声明参数，用it关键字代替即可。
+
+```kotlin
+fun doStudy(study: Study?) {
+study?.let {
+it.readBooks()
+it.doHomework()
+}
+}
+```
+
+
+
+### 其他技巧
+
+1.SecondActivity::class.java的写法就相当于Java中SecondActivity.class的写法。
+
+标准函数**with**、**run**和**apply**
+
+一段代码
+
+```kotlin
+val list = listOf("Apple", "Banana", "Orange", "Pear", "Grape") 
+val builder = StringBuilder()
+builder.append("Start eating fruits.\n")
+for (fruit in list) {
+		builder.append(fruit).append("\n") 
+}
+builder.append("Ate all fruits.") 
+val result = builder.toString()
+println(result)
+```
+
+
+
+下面分别使用with，run以及apply实现代码相同的功能。
+
+
+
+#### with
+
+```kotlin
+val list = listOf("Apple", "Banana", "Orange", "Pear", "Grape")
+val result = with(StringBuilder()) {
+    append("Start eating fruits.\n") for (fruit in list) {
+    append(fruit).append("\n") }
+    append("Ate all fruits.")
+    toString()
+}
+println(result)
+```
+
+首先我们给with函数的第一个参数传入了一个StringBuilder对象，那么接下来整个Lambda表达式的上下文就会是这个 StringBuilder对象。于是我们在Lambda表达式中就不用再像刚才那样调用 builder.append()和builder.toString()方法了，而是可以直接调用append()和 toString()方法。Lambda表达式的最后一行代码会作为with函数的返回值返回，最终我们将结果打印出来。
+
+#### run
+
+将上面的with改为run的形式如下
+
+run函数通常不会直接调用， 而是要在某个对象的基础上调用;其次run函数只接收一个Lambda参数，并且会在Lambda表 达式中提供调用对象的上下文。
+
+```kotlin
+val list = listOf("Apple", "Banana", "Orange", "Pear", "Grape") 
+val result = StringBuilder().run {
+			append("Start eating fruits.\n")
+      for (fruit in list) {
+		      append(fruit).append("\n") }
+     			append("Ate all fruits.")
+      		toString()
+}
+println(result)
+```
+
+
+
+#### apply
+
+apply函数无法指定返回值，而是会自动返回调用对象本身，上面的代码改为apply之后
+
+```kotlin
+val list = listOf("Apple", "Banana", "Orange", "Pear", "Grape") 
+val result = StringBuilder().apply {
+			append("Start eating fruits.\n")
+      for (fruit in list) {
+		      append(fruit).append("\n") }
+     			append("Ate all fruits.")
+      		toString()
+}
+println(result)
+```
+
+
+
+接下来对代码进行一下修改
+
+````kotlin
+val list = listOf("Apple", "Banana", "Orange", "Pear", "Grape")
+val result = StringBuilder().apply {
+  append("Start eating fruits.\n") 
+  for (fruit in list) {
+  		append(fruit).append("\n") }
+  		append("Ate all fruits.")
+}
+println(result.toString())
+````
+
+会发现修改之后的结果和我们一开始的不一样，这是因为apply和run的区别在于,apply函数无法指定返回值，只能返回调用对象本身，因此这里的 result实际上是一个StringBuilder对象，所以我们在最后打印的时候还要再调用它的 toString()方法才行。
+
+#### 静态方法
+
+
+
+##### 注解方式
+
+Kotlin确实没有直接定义静态方法的关键字，但是提供了一些语法特性来支持类 似于静态方法调用的写法。
+
+```kotlin
+class Util {
+    fun doAction1() {
+        println("do action1")
+    }
+    @JvmStatic
+    companion object {
+        fun doAction2() {
+            println("do action2")
+        }
+    }
+}
+```
+
+可以通过 companion object代码块，将函数包裹使它具有类似静态方法的功能。这里doAction1调用的时候需要使用实例化Util的实例才能调用，但是doAction2就可以通过类名Util直接调用。
+
+companion object这个关键字实际上会在Util类的内部创建一个伴生类，而doAction2()方法就是定义在这个伴生类里面的实例方法。只是Kotlin会保证Util类始终只会存在一个伴生类对象，因此调用Util.doAction2()方法实际上就是调用了Util类中伴生对象的doAction2()方法。
+
+其中@JvmStatic注解，让Kotlin编译器将这些方法编译成真正的静态方法，它只能加在单例类或companion object中的方法上。
+
+##### 顶层方法
+
+除了使用@JvmStatic注解，kotlin还可以使用java没有顶层方法，这个就和在python的类上面单独定义了一个方法一样。
+
+如何在java中进行调用？
+
+比如我们创建的那个文件kotlin文件叫Helper.kt，Kotlin编译器会自动创建一个叫作HelperKt的Java类， 在Java中使用HelperKt.doSomething()的写法来调用就可以了。
+
 
 
