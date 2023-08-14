@@ -895,9 +895,208 @@ companion object这个关键字实际上会在Util类的内部创建一个伴生
 
 比如我们创建的那个文件kotlin文件叫Helper.kt，Kotlin编译器会自动创建一个叫作HelperKt的Java类， 在Java中使用HelperKt.doSomething()的写法来调用就可以了。
 
-#### 变量延迟初始化
+### 变量延迟初始化
 
-延迟初始化使用的是lateinit关键字，它可以告诉Kotlin编译器，我会在晚些时候对这个变量 进行初始化，这样就不用在一开始的时候将它赋值为null了。
+使用场景：
+
+比如定义了一个全局变量，后面有个对它进行实例初始化的操作，然后有好多地方用到这个全局变量的实例对象进行操作，那么就涉及到每次都要进行判空操作，为了简化这种情况，就可以使用延迟初始化策略了。
+
+延迟初始化使用的是lateinit关键字修饰上面的全局变量，它可以告诉Kotlin编译器，我会在晚些时候对这个变量 进行初始化，这样就不用在一开始的时候将它赋值为null了。
+
+```
+    private lateinit var context: Context
+```
+
+虽然这样使用起来是方便了，但是要注意后面的代码如果context没初始化,那么程序就一定会崩溃，并且抛出一个 UninitializedPropertyAccessException异常.
+
+ 下面一段代码
+
+```kotlin
+private lateinit var adapter: MsgAdapter
+override fun onCreate(savedInstanceState: Bundle?) { 
+			adapter = MsgAdapter(msgList)
+}
+```
+
+为了防止代码被重复赋值，可以如下修改。
+
+```kotlin
+if (!::adapter.isInitialized) {
+		adapter = MsgAdapter(msgList)
+}
+```
+
+::adapter.isInitialized可用于判断adapter变量是否已经初始化。这是固定的写法。然后我们再对结果进行取反，如果还没有 初始化，那么就立即对adapter变量进行初始化，否则什么都不用做。
+
+
+
+#### 密封类
+
+一段代码作为示例
+
+```kotlin
+interface Result
+class Success(val msg: String) : Result
+class Failure(val error: Exception) : Result
+```
+
+定义一个Result接口，然后定义了两个类Success和Failure来实现接口Result。
+
+接下来再定义一个getResultMsg()方法，用于获取最终执行结果的信息，代码如下所示:
+
+```kotlin
+fun getResultMsg(result: Result) = when (result) {
+  		is Success -> result.msg
+			is Failure -> result.error.message
+			else -> throw IllegalArgumentException()
+}
+```
+
+在使用when语句最后一个条件必须加else的，如果不加kotlin错误就会出错的，但是我们这里如果就这两种情况成功和失败，那么这个时候加个else对我们来说是多余的，这个时候就可以使用密封类简化上面的代码。
+
+
+
+interface关键字改成了sealed class。
+
+```kotlin
+sealed class Result
+class Success(val msg: String) : Result()
+class Failure(val error: Exception) : Result()
+```
+
+另外，由于密封类是一个可继承的类，因此在继承它的时候需要在后面加上一对括号
+
+这时候我们getResultMsg方法就可以这样写了
+
+```kotlin
+fun getResultMsg(result: Result) = when (result) { 
+	is Success -> result.msg
+	is Failure -> "Error is ${result.error.message}"
+}
+```
+
+
+
+当在when语句中传入一个密封类变量 作为条件时，Kotlin编译器会自动检查该密封类有哪些子类，并强制要求你将每一个子类所对应 的条件全部处理。这样就可以保证，即使没有编写else条件，也不可能会出现漏写条件分支的情况。
+
+
+
+### 高阶函数和内联函数
+
+#### 高阶函数
+
+简答理解高阶函数就是函数里面调用函数。接收函数类型的函数就是高阶函数。
+
+一段示例代码
+
+```kotlin
+fun example(func: (String, Int) -> Unit) { 
+		func("hello", 123)
+}
+```
+
+->左边的部分就是用来声明该函数接收什么参数的，多个参数之间使用逗号隔 开，如果不接收任何参数，写一对空括号就可以了。而->右边的部分用于声明该函数的返回值 是什么类型，如果没有返回值就使用Unit，它大致相当于Java中的void。
+
+关于高阶函数的声明以及简化示例
+
+```kotlin
+fun num1AndNum2(num1: Int, num2: Int, operation: (Int, Int) -> Int): Int {
+  val result = operation(num1, num2)
+  return result
+}
+```
+
+operation参数对应下面两个函数
+
+```kotlin
+fun plus(num1: Int, num2: Int): Int { 
+  return num1 + num2
+}
+fun minus(num1: Int, num2: Int): Int {
+  return num1 - num2
+}
+```
+
+调用方式如下
+
+```kotlin
+fun main() {
+   val num1 = 100
+   val num2 = 80 
+   val result1 = num1AndNum2(num1, num2, ::plus)
+   val result2 = num1AndNum2(num1, num2, ::minus) 
+   println("result1 is $result1") println("result2 is $result2")
+}
+```
+
+::plus和::minus，前面的::是固定写法，表示这是参数是函数类型的。
+
+
+
+kotlin提供的lambda，可以让我们使用匿名函数简化上面的代码
+
+```kotlin
+fun main() {
+val num1 = 100
+val num2 = 80
+val result1 = num1AndNum2(num1, num2) { n1, n2 ->
+    n1 + n2 
+}
+val result2 = num1AndNum2(num1, num2) { n1, n2 ->
+    n1 - n2
+}
+println("result1 is $result1") 
+println("result2 is $result2")
+}
+```
+
+
+
+再看其他结合apply函数的例子，apply函数，它可以用于给 Lambda表达式提供一个指定的上下文，当需要连续调用同一个对象的多个方法时，apply函数可以让代码变得更加精简。
+
+```kotlin
+fun StringBuilder.build(block: StringBuilder.() -> Unit): StringBuilder {
+			block()
+			return this
+}
+```
+
+这里我们给StringBuilder类定义了一个build扩展函数，这个扩展函数接收一个函数类型参数，并且返回值类型也是StringBuilder。
+
+block后面的参数类型是个函数，首先是StringBuilder. 表示这个函数定义在那个类中。在函数类型的前面加上ClassName. 就表示这个函数类型是定义在哪个类当中的。因为没有参数所以使用(),->后面的Unit表示函数没有返回值。
+
+在这里我们使用apply,with,run函数的那节代码。
+
+这样做的好处，当我们调用build 函数时传入的Lambda表达式将会自动拥有StringBuilder的上下文，同时这也是apply函数的实现方式。
+
+
+
+```kotlin
+fun main() {
+    val list = listOf("Apple", "Banana", "Orange", "Pear", "Grape") 
+  val result = StringBuilder().build {
+    append("Start eating fruits.\n") for (fruit in list) {
+    append(fruit).append("\n") }
+    append("Ate all fruits.") }
+    println(result.toString()) 
+}
+```
+
+build函数的用法和apply函数基本上是一模一样的，只不过我们编写的build函 数目前只能作用在StringBuilder类上面，而apply函数是可以作用在所有类上面的。如果想 实现apply函数的这个功能，需要借助于Kotlin的泛型才行。
+
+#### 内联函数
+
+内联函数的工作原理：
+
+Kotlin编译器会将内联函数中的代码在编译的时候自动替换到调用它的地方，这样也就不存在运行时的开销了。
+
+但是内联的函数类型参数只允许传递给另外一个内联函数。Kotlin还要提供一个noinline关键字来排除 内联功能呢?这是因为内联的函数类型参数在编译的时候会被进行代码替换，因此它没有真正 的参数属性。非内联的函数类型参数可以自由地传递给其他任何函数。
+
+内联函数和非内联函数还有一个重要的区别，那就是内联函数所引用的Lambda表达式 中是可以使用return关键字来进行函数返回的，而非内联函数只能进行局部返回。
+
+内容比较多后续补充
+
+
 
 ### 泛型和委托
 
